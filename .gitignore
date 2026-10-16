@@ -1,0 +1,36 @@
+# ===== Claude / IA =====
+CLAUDE.md
+.claude/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# ===== Node / Vite =====
+node_modules/
+frontend/dist/
+*.local
+npm-debug.log*
+
+# ===== Diagramas gerados (pyreverse) =====
+# (remova esta linha se quiser versionar o UML)
+backend/docs/uml/*.dot
+
+# ===== Ambiente / SO / Editor =====
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
