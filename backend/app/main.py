@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-app = FastAPI(title="Calculadora de Cinemática 2D e 3D")
+app = FastAPI(title="Calculadora de Cinemática 1D e 2D")
 
 @app.get("/api/ping")
 def ping():

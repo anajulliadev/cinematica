@@ -1,6 +1,7 @@
-# ===== Claude / IA =====
+# ===== Claude / IA / planejamento local =====
 CLAUDE.md
 .claude/
+/plan.md
 
 # ===== Python =====
 __pycache__/
