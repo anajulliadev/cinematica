@@ -8,10 +8,12 @@ from fisica.unidades import EntradaInvalida
 
 
 class DadosInsuficientes(Exception):
-    def __init__(self, alvo: str, faltando: list[str], mensagem: str):
+    def __init__(self, alvo: str, faltando: list[str], mensagem: str,
+                 nomes: dict[str, str] | None = None):
         super().__init__(mensagem)
         self.alvo = alvo
         self.faltando = faltando
+        self.nomes = nomes or {}     # id -> nome legível (a API manda para o front)
 
 
 @dataclass
@@ -44,7 +46,8 @@ class Solver:
                 # alguma conta foi impossível: o problema são os dados, não a falta deles
                 raise next(iter(bloqueadas.values()))
             faltando = self._o_que_falta(conhecidas, alvo)
-            raise DadosInsuficientes(alvo, faltando, self._mensagem(alvo, faltando))
+            nomes = {u: self.mov.variaveis[u].nome for u in faltando}
+            raise DadosInsuficientes(alvo, faltando, self._mensagem(alvo, faltando), nomes)
 
         # Continua sem guardar passos, para o card e a animação terem tudo
         estado = dict(conhecidas)
