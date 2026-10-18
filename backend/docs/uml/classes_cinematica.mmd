@@ -1,0 +1,190 @@
+classDiagram
+  class Alcance {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+  }
+  class AlturaMaxima {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+  }
+  class AnguloPeloAlcance {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+    incognita_isolavel(conhecidas)
+  }
+  class ComponenteX {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+    incognita_isolavel(conhecidas)
+  }
+  class ComponenteY {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+    incognita_isolavel(conhecidas)
+  }
+  class Conversor {
+    buscar(id_unidade: str) Unidade
+    do_si(valor_si: float, unidade: Unidade) Grandeza
+    exigir_dimensao(unidade: Unidade, dimensao: Dimensao) None
+    para_si(grandeza: Grandeza) float
+    si_de(dimensao: Dimensao) Unidade
+    unidades_de(dimensao: Dimensao) list[Unidade]
+  }
+  class DadosInconsistentes {
+  }
+  class DadosInsuficientes {
+    alvo : str
+    faltando : list[str]
+    nomes : dict
+  }
+  class Dimensao {
+    name
+  }
+  class EntradaInvalida {
+  }
+  class EquacaoHoraria {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+  }
+  class Formula {
+    variaveis : frozenset[str]
+    calcular(alvo: str, conhecidas: dict[str, float])* float
+    incognita_isolavel(conhecidas: dict[str, float])* str | None
+  }
+  class FormulaBase {
+    isoladas : dict[str, str]
+    latex : str
+    nome : str
+    papeis : tuple[str, ...]
+    variaveis : frozenset[str]
+    calcular(alvo, conhecidas)
+    incognita_isolavel(conhecidas)
+    incognitas(conhecidas: dict[str, float]) frozenset[str]
+    passo(alvo, conhecidas, valor, simbolos: dict[str, str]) Passo
+  }
+  class Grandeza {
+    unidade
+    valor : float
+  }
+  class LancamentoProjetil {
+    nome : str
+    padroes
+    preparar(conhecidas)
+    trajetoria(estado, n)
+  }
+  class MRU {
+    nome : str
+    trajetoria(estado, n)
+  }
+  class MRUV {
+    nome : str
+    trajetoria(estado, n)
+  }
+  class Movimento {
+    formulas : list[Formula]
+    nome : str
+    padroes : dict[str, float]
+    variaveis : dict[str, Variavel]
+    preparar(conhecidas: dict[str, float]) list[Passo]
+    simbolos() dict[str, str]
+    trajetoria(estado: dict[str, float], n: int)* list[dict[str, float]]
+  }
+  class MovimentoUniforme {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+  }
+  class Passo {
+    formula : str
+    latex : str
+    latex_isolada : str
+    observacao : str | None
+    usadas : dict[str, float]
+    valor_si : float
+    variavel : str
+  }
+  class QuedaLivre {
+    nome : str
+    padroes
+    trajetoria(estado, n)
+  }
+  class Resultado {
+    alvo : str
+    estado : dict[str, float]
+    passos : list[Passo]
+    valor_si : float
+  }
+  class Solver {
+    mov
+    resolver(entradas: dict[str, float], alvo: str) Resultado
+  }
+  class TempoVoo {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+  }
+  class Torricelli {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+  }
+  class Unidade {
+    dimensao
+    fator : float
+    id : str
+    simbolo : str
+  }
+  class Variavel {
+    dimensao
+    id : str
+    nao_negativa : bool
+    nome : str
+    simbolo : str
+  }
+  class VelocidadeMedia {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+  }
+  class VelocidadeTempo {
+    isoladas : dict
+    latex : str
+    nome : str
+    papeis : tuple
+  }
+  Alcance --|> FormulaBase
+  AlturaMaxima --|> FormulaBase
+  AnguloPeloAlcance --|> FormulaBase
+  ComponenteX --|> FormulaBase
+  ComponenteY --|> FormulaBase
+  EquacaoHoraria --|> FormulaBase
+  FormulaBase --|> Formula
+  MovimentoUniforme --|> FormulaBase
+  TempoVoo --|> FormulaBase
+  Torricelli --|> FormulaBase
+  VelocidadeMedia --|> FormulaBase
+  VelocidadeTempo --|> FormulaBase
+  LancamentoProjetil --|> Movimento
+  MRU --|> Movimento
+  MRUV --|> Movimento
+  QuedaLivre --|> Movimento
+  Variavel --> Dimensao : dimensao
+  Unidade --> Dimensao : dimensao
+  Grandeza --> Unidade : unidade
+  Movimento --o Solver : mov
