@@ -85,10 +85,24 @@ class Movimento(ABC):
         return {v.id: v.simbolo for v in self._variaveis.values()}
 
     @abstractmethod
+    def trajetoria(self, estado: dict[str, float], n: int = 60) -> list[dict[str, float]]:
+        """Pontos (SI) para a animação e os gráficos, de t = 0 até o fim do movimento.
+        Lista vazia se o estado não tiver os dados necessários."""
+
+    @staticmethod
+    def _instantes(t_final: float, n: int) -> list[float]:
+        """n + 1 instantes igualmente espaçados, incluindo 0 e t_final."""
+        return [t_final * i / n for i in range(n + 1)]
+
+    @abstractmethod
     def _criar_variaveis(self) -> list[Variavel]: ...
 
     @abstractmethod
     def _criar_formulas(self) -> list[Formula]: ...
+
+
+def _tem(estado: dict[str, float], *ids: str) -> bool:
+    return all(i in estado for i in ids)
 
 
 class MRU(Movimento):
@@ -100,6 +114,12 @@ class MRU(Movimento):
     def _criar_formulas(self):
         return [MovimentoUniforme()]
 
+    def trajetoria(self, estado, n=60):
+        if not _tem(estado, "t", "v"):
+            return []
+        v = estado["v"]
+        return [{"t": t, "s": v * t, "v": v} for t in self._instantes(estado["t"], n)]
+
 
 class MRUV(Movimento):
     nome = "Movimento Retilíneo Uniformemente Variado"
@@ -109,6 +129,15 @@ class MRUV(Movimento):
 
     def _criar_formulas(self):
         return [VelocidadeTempo(), EquacaoHoraria(), Torricelli(), VelocidadeMedia()]
+
+    def trajetoria(self, estado, n=60):
+        if not _tem(estado, "t", "v0", "a"):
+            return []
+        v0, a = estado["v0"], estado["a"]
+        return [
+            {"t": t, "s": v0 * t + 0.5 * a * t**2, "v": v0 + a * t}
+            for t in self._instantes(estado["t"], n)
+        ]
 
 
 class QuedaLivre(Movimento):
@@ -132,6 +161,16 @@ class QuedaLivre(Movimento):
     def padroes(self):
         return {"v0": 0.0, "g": 9.81}
 
+    def trajetoria(self, estado, n=60):
+        # y = altura até o chão (começa em h e termina em 0), para a régua da torre
+        if not _tem(estado, "t", "h", "v0", "g"):
+            return []
+        h, v0, g = estado["h"], estado["v0"], estado["g"]
+        return [
+            {"t": t, "y": max(h - (v0 * t + 0.5 * g * t**2), 0.0), "v": v0 + g * t}
+            for t in self._instantes(estado["t"], n)
+        ]
+
 
 class LancamentoProjetil(Movimento):
     """Oblíquo e horizontal (horizontal = θ = 0). Eixo y para cima, g > 0."""
@@ -154,6 +193,21 @@ class LancamentoProjetil(Movimento):
     @property
     def padroes(self):
         return {"h0": 0.0, "g": 9.81}
+
+    def trajetoria(self, estado, n=60):
+        if not _tem(estado, "t_voo", "vx", "vy", "h0", "g"):
+            return []
+        vx, vy, h0, g = estado["vx"], estado["vy"], estado["h0"], estado["g"]
+        return [
+            {
+                "t": t,
+                "x": vx * t,
+                "y": max(h0 + vy * t - 0.5 * g * t**2, 0.0),
+                "vx": vx,
+                "vy": vy - g * t,
+            }
+            for t in self._instantes(estado["t_voo"], n)
+        ]
 
     def preparar(self, conhecidas):
         # Lançamento horizontal: θ = 0 implica vy = 0 mesmo sem saber v0.

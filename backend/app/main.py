@@ -45,7 +45,7 @@ def calcular(req: CalculoEntrada) -> CalculoSaida:
         resultado=_grandeza_saida(resultado.valor_si, unidade_saida),
         passos=[_passo_saida(mov, p) for p in resultado.passos],
         estado=resultado.estado,
-        trajetoria=[],   # etapa 8
+        trajetoria=mov.trajetoria(resultado.estado),
     )
 
 
