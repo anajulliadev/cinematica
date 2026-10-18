@@ -29,7 +29,7 @@ class Solver:
     def resolver(self, entradas: dict[str, float], alvo: str) -> Resultado:
         self._validar(entradas, alvo)
         conhecidas = {**self.mov.padroes, **entradas}
-        passos: list[Passo] = []
+        passos: list[Passo] = self.mov.preparar(conhecidas)
         bloqueadas: dict[tuple[Formula, str], DadosInconsistentes] = {}
 
         # Laço do PDF: enquanto houver fórmula com exatamente uma incógnita

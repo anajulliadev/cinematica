@@ -266,3 +266,180 @@ class VelocidadeMedia(FormulaBase):
                 return 2 * x["ds"] / x["t"] - x["v0"]
             case "t":
                 return 2 * x["ds"] / (x["v0"] + x["v"])
+
+
+# =====================================================================
+# Fórmulas 2D (projétil). Eixo y para cima, g > 0, θ acima da horizontal.
+# =====================================================================
+
+def _quase_zero(valor: float) -> bool:
+    return abs(valor) < 1e-12
+
+
+class ComponenteX(FormulaBase):
+    nome = "Componente horizontal da velocidade"
+    papeis = ("vx", "v0", "theta")
+    latex = "$vx = $v0 \\cdot \\cos $theta"
+    isoladas = {
+        "vx": "$vx = $v0 \\cdot \\cos $theta",
+        "v0": "$v0 = \\frac{$vx}{\\cos $theta}",
+    }
+
+    def incognita_isolavel(self, conhecidas):
+        var = super().incognita_isolavel(conhecidas)
+        theta = conhecidas.get(self._var["theta"])
+        # θ = 90° (lançamento vertical): vx = 0 não diz nada sobre v0
+        if var == self._var["v0"] and theta is not None and _quase_zero(math.cos(theta)):
+            return None
+        return var
+
+    def _isolar(self, papel, x):
+        match papel:
+            case "vx":
+                return x["v0"] * math.cos(x["theta"])
+            case "v0":
+                return x["vx"] / math.cos(x["theta"])
+
+
+class ComponenteY(FormulaBase):
+    nome = "Componente vertical da velocidade"
+    papeis = ("vy", "v0", "theta")
+    latex = "$vy = $v0 \\cdot \\sin $theta"
+    isoladas = {
+        "vy": "$vy = $v0 \\cdot \\sin $theta",
+        "v0": "$v0 = \\frac{$vy}{\\sin $theta}",
+        "theta": "$theta = \\arcsin \\frac{$vy}{$v0}",
+    }
+
+    def incognita_isolavel(self, conhecidas):
+        var = super().incognita_isolavel(conhecidas)
+        theta = conhecidas.get(self._var["theta"])
+        # θ = 0 (lançamento horizontal): vy = 0 não diz nada sobre v0
+        if var == self._var["v0"] and theta is not None and _quase_zero(math.sin(theta)):
+            return None
+        return var
+
+    def _isolar(self, papel, x):
+        match papel:
+            case "vy":
+                return x["v0"] * math.sin(x["theta"])
+            case "v0":
+                return x["vy"] / math.sin(x["theta"])
+            case "theta":
+                return math.asin(x["vy"] / x["v0"])
+
+
+class TempoVoo(FormulaBase):
+    nome = "Tempo de voo"
+    papeis = ("t_voo", "vy", "h0", "g")
+    latex = "$t_voo = \\frac{$vy + \\sqrt{$vy^2 + 2 $g \\cdot $h0}}{$g}"
+    isoladas = {
+        "t_voo": "$t_voo = \\frac{$vy + \\sqrt{$vy^2 + 2 $g \\cdot $h0}}{$g}",
+        "vy": "$vy = \\frac{\\frac{1}{2} $g \\cdot $t_voo^2 - $h0}{$t_voo}",
+        "h0": "$h0 = \\frac{1}{2} $g \\cdot $t_voo^2 - $vy \\cdot $t_voo",
+    }
+
+    def _isolar(self, papel, x):
+        match papel:
+            case "t_voo":
+                radicando = x["vy"] ** 2 + 2 * x["g"] * x["h0"]
+                if radicando < 0:
+                    raise DadosInconsistentes("Tempo de voo: o projétil nunca chega ao chão")
+                return (x["vy"] + math.sqrt(radicando)) / x["g"]
+            case "vy":
+                return (0.5 * x["g"] * x["t_voo"] ** 2 - x["h0"]) / x["t_voo"]
+            case "h0":
+                return 0.5 * x["g"] * x["t_voo"] ** 2 - x["vy"] * x["t_voo"]
+
+
+class Alcance(FormulaBase):
+    nome = "Alcance horizontal"
+    papeis = ("A", "vx", "t_voo")
+    latex = "$A = $vx \\cdot $t_voo"
+    isoladas = {
+        "A": "$A = $vx \\cdot $t_voo",
+        "vx": "$vx = \\frac{$A}{$t_voo}",
+        "t_voo": "$t_voo = \\frac{$A}{$vx}",
+    }
+
+    def _isolar(self, papel, x):
+        match papel:
+            case "A":
+                return x["vx"] * x["t_voo"]
+            case "vx":
+                return x["A"] / x["t_voo"]
+            case "t_voo":
+                return x["A"] / x["vx"]
+
+
+class AlturaMaxima(FormulaBase):
+    nome = "Altura máxima"
+    papeis = ("H", "h0", "vy", "g")
+    latex = "$H = $h0 + \\frac{$vy^2}{2 $g}"
+    isoladas = {
+        "H": "$H = $h0 + \\frac{$vy^2}{2 $g}",
+        "h0": "$h0 = $H - \\frac{$vy^2}{2 $g}",
+        "vy": "$vy = \\sqrt{2 $g ($H - $h0)}",
+    }
+
+    def _isolar(self, papel, x):
+        match papel:
+            case "H":
+                return x["h0"] + self._subida(x["vy"], x["g"])
+            case "h0":
+                return x["H"] - self._subida(x["vy"], x["g"])
+            case "vy":
+                return math.sqrt(2 * x["g"] * (x["H"] - x["h0"]))
+
+    @staticmethod
+    def _subida(vy, g):
+        """Quanto o projétil sobe acima de h0 (lançado para baixo: nada)."""
+        return max(vy, 0.0) ** 2 / (2 * g)
+
+    def _observacao(self, papel):
+        if papel == "vy":
+            return "Raiz quadrada: foi considerado o valor positivo (lançamento para cima)."
+        return None
+
+
+class AnguloPeloAlcance(FormulaBase):
+    """Caso inverso do PDF: achar o ângulo a partir do alcance.
+    Não sai por simples isolamento das outras fórmulas, por isso é uma fórmula
+    própria. Vale só para lançamento do chão (h0 = 0)."""
+
+    nome = "Alcance no mesmo nível"
+    papeis = ("A", "v0", "theta", "g", "h0")
+    latex = "$A = \\frac{$v0^2 \\cdot \\sin(2 $theta)}{$g}"
+    isoladas = {
+        "A": "$A = \\frac{$v0^2 \\cdot \\sin(2 $theta)}{$g}",
+        "v0": "$v0 = \\sqrt{\\frac{$A \\cdot $g}{\\sin(2 $theta)}}",
+        "theta": "$theta = \\frac{1}{2} \\arcsin \\frac{$A \\cdot $g}{$v0^2}",
+    }
+
+    def incognita_isolavel(self, conhecidas):
+        h0 = conhecidas.get(self._var["h0"])
+        if h0 is not None and not math.isnan(h0) and not _quase_zero(h0):
+            return None                    # fora do chão a fórmula não vale
+        return super().incognita_isolavel(conhecidas)
+
+    def _isolar(self, papel, x):
+        match papel:
+            case "A":
+                return x["v0"] ** 2 * math.sin(2 * x["theta"]) / x["g"]
+            case "v0":
+                seno = math.sin(2 * x["theta"])
+                if _quase_zero(seno):
+                    raise ZeroDivisionError
+                return math.sqrt(x["A"] * x["g"] / seno)
+            case "theta":
+                razao = x["A"] * x["g"] / x["v0"] ** 2
+                if razao > 1:
+                    raise DadosInconsistentes(
+                        "Alcance no mesmo nível: alcance impossível com essa velocidade"
+                    )
+                return 0.5 * math.asin(razao)
+
+    def _observacao(self, papel):
+        if papel == "theta":
+            return "O ângulo complementar (90° − θ) atinge o mesmo alcance."
+        return None
