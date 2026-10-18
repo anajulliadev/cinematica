@@ -1,0 +1,184 @@
+classDiagram
+  direction TB
+
+  %% ============ Fórmulas ============
+  class Formula {
+    <<interface>>
+    +variaveis frozenset
+    +incognita_isolavel(conhecidas)* str
+    +calcular(alvo, conhecidas)* float
+  }
+  class FormulaBase {
+    <<abstract>>
+    +nome str
+    +papeis tuple
+    +latex str
+    +isoladas dict
+    +incognitas(conhecidas) frozenset
+    +incognita_isolavel(conhecidas) str
+    +calcular(alvo, conhecidas) float
+    +passo(alvo, conhecidas, valor, simbolos) Passo
+    #_isolar(papel, x)* float
+    #_observacao(papel) str
+  }
+  class MovimentoUniforme
+  class VelocidadeTempo
+  class EquacaoHoraria
+  class Torricelli {
+    #_observacao(papel) str
+  }
+  class VelocidadeMedia
+  class ComponenteX {
+    +incognita_isolavel(conhecidas) str
+  }
+  class ComponenteY {
+    +incognita_isolavel(conhecidas) str
+  }
+  class TempoVoo
+  class Alcance
+  class AlturaMaxima {
+    #_observacao(papel) str
+  }
+  class AnguloPeloAlcance {
+    +incognita_isolavel(conhecidas) str
+    #_observacao(papel) str
+  }
+  class Passo {
+    <<dataclass>>
+    +formula str
+    +latex str
+    +latex_isolada str
+    +variavel str
+    +valor_si float
+    +usadas dict
+    +observacao str
+  }
+
+  FormulaBase ..|> Formula
+  MovimentoUniforme --|> FormulaBase
+  VelocidadeTempo --|> FormulaBase
+  EquacaoHoraria --|> FormulaBase
+  Torricelli --|> FormulaBase
+  VelocidadeMedia --|> FormulaBase
+  ComponenteX --|> FormulaBase
+  ComponenteY --|> FormulaBase
+  TempoVoo --|> FormulaBase
+  Alcance --|> FormulaBase
+  AlturaMaxima --|> FormulaBase
+  AnguloPeloAlcance --|> FormulaBase
+  FormulaBase ..> Passo : gera
+
+  %% ============ Movimentos ============
+  class Movimento {
+    <<abstract>>
+    +nome str
+    +variaveis dict
+    +formulas list
+    +padroes dict
+    +preparar(conhecidas) list
+    +simbolos() dict
+    +trajetoria(estado, n)* list
+    #_criar_variaveis()* list
+    #_criar_formulas()* list
+  }
+  class MRU {
+    +trajetoria(estado, n) list
+  }
+  class MRUV {
+    +trajetoria(estado, n) list
+  }
+  class QuedaLivre {
+    +padroes dict
+    +trajetoria(estado, n) list
+  }
+  class LancamentoProjetil {
+    +padroes dict
+    +preparar(conhecidas) list
+    +trajetoria(estado, n) list
+  }
+  class Variavel {
+    <<dataclass>>
+    +id str
+    +nome str
+    +simbolo str
+    +dimensao Dimensao
+    +nao_negativa bool
+  }
+
+  MRU --|> Movimento
+  MRUV --|> Movimento
+  QuedaLivre --|> Movimento
+  LancamentoProjetil --|> Movimento
+  Movimento "1" *-- "1..*" Formula : formulas
+  Movimento "1" *-- "1..*" Variavel : variaveis
+
+  %% ============ Solver ============
+  class Solver {
+    +resolver(entradas, alvo) Resultado
+    -_dar_um_passo(conhecidas, bloqueadas) Passo
+    -_alcancaveis(conhecidas) set
+    -_o_que_falta(conhecidas, alvo) list
+  }
+  class Resultado {
+    <<dataclass>>
+    +alvo str
+    +valor_si float
+    +passos list
+    +estado dict
+  }
+
+  Solver o-- Movimento : mov
+  Solver ..> Resultado : cria
+  Resultado "1" *-- "*" Passo : passos
+
+  %% ============ Unidades ============
+  class Dimensao {
+    <<enumeration>>
+    COMPRIMENTO
+    TEMPO
+    VELOCIDADE
+    ACELERACAO
+    ANGULO
+  }
+  class Unidade {
+    <<dataclass>>
+    +id str
+    +simbolo str
+    +dimensao Dimensao
+    +fator float
+  }
+  class Grandeza {
+    <<dataclass>>
+    +valor float
+    +unidade Unidade
+  }
+  class Conversor {
+    +buscar(id_unidade)$ Unidade
+    +para_si(grandeza)$ float
+    +do_si(valor_si, unidade)$ Grandeza
+    +unidades_de(dimensao)$ list
+    +si_de(dimensao)$ Unidade
+    +exigir_dimensao(unidade, dimensao)$ None
+  }
+
+  Unidade --> Dimensao
+  Variavel --> Dimensao
+  Grandeza --> Unidade
+  Conversor ..> Grandeza : converte
+
+  %% ============ Erros ============
+  class Exception
+  class EntradaInvalida
+  class DadosInconsistentes
+  class DadosInsuficientes {
+    +alvo str
+    +faltando list
+    +nomes dict
+  }
+
+  EntradaInvalida --|> Exception
+  DadosInconsistentes --|> Exception
+  DadosInsuficientes --|> Exception
+  Conversor ..> EntradaInvalida : lança
+  FormulaBase ..> DadosInconsistentes : lança
+  Solver ..> DadosInsuficientes : lança
