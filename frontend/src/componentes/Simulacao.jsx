@@ -24,7 +24,6 @@ export default function Simulacao() {
           <h3 className="text-2xl font-bold text-text">2,88 s</h3>
         </div>
       </div>
-
     </>
   )
 }
