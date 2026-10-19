@@ -2,33 +2,16 @@ import { Button } from "@/components/ui/button";
 import Configure from "./componentes/Configure";
 import Simulacao from "./componentes/Simulacao";
 import { useState } from "react";
-
+import { criarFormulario } from "./config/movimentos";
 
 export default function App() {
   const [dimension, setDimension] = useState(1);
-  const [formData, setFormData] = useState({
-    tipoMovimento: "",
-    objetivo: "",
-    velocidadeInicial: "",
-    unidadeVelocidade: "",
-    angulo: "",
-    unidadeAngulo: "",
-    alturaInicial: "",
-    unidadeAltura: "",
-    gravidade: "9.81",
-    unidadeGravidade: "",
-  });
+  const [formData, setFormData] = useState(() => criarFormulario(1));
 
-  function changeDimension1(event) {
-    if (dimension == 1) {
-      setDimension(2);
-    }
-  }
-
-  function changeDimension2(event) {
-    if (dimension == 2) {
-      setDimension(1);
-    }
+  function changeDimension(event) {
+    if (dimension == event) return;
+    setDimension(event);
+    setFormData(criarFormulario(event));
   }
 
   function handleSubmit(event) {
@@ -49,14 +32,16 @@ export default function App() {
           </p>
           <div className="flex gap-1 bg-surface rounded-full p-1">
             <Button
-              onClick={() => setDimension(1)}
+              onClick={() => changeDimension(1)}
+              aria-pressed={dimension === 1}
               className={`py-5 px-6 rounded-full ${
                 dimension == 2 ? 'bg-surface' : 'bg-primary'
               }`}>
               <p className="text-base font-bold">1D</p>
             </Button>
             <Button
-              onClick={() => setDimension(2)}
+              onClick={() => changeDimension(2)}
+              aria-pressed={dimension === 2}
               className={`py-5 px-6 rounded-full ${
                 dimension == 1 ? 'bg-surface' : 'bg-primary'
               }`}>
@@ -65,7 +50,7 @@ export default function App() {
           </div>
         </header>
         <section className="grid grid-cols-3 gap-6">
-          <Configure formData={formData} setFormData={setFormData} handleSubmit={handleSubmit} />
+          <Configure dimension={dimension} formData={formData} setFormData={setFormData} handleSubmit={handleSubmit} />
           <div className="flex flex-col col-span-2 p-6 gap-4 bg-surface border border-border rounded-xl">
             <Simulacao />
           </div>
