@@ -1,9 +1,28 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.exemplos import EXEMPLOS
 from app.main import app
 
 cliente = TestClient(app)
+
+
+# ---------- exemplos do /docs ----------
+
+@pytest.mark.parametrize("nome", list(EXEMPLOS))
+def test_exemplo_do_docs_responde_o_status_esperado(nome):
+    # "erro_..." tem que dar 400; os outros, 200 (se um exemplo quebrar, o /docs mentiria)
+    esperado = 400 if nome.startswith("erro_") else 200
+    assert calcular(EXEMPLOS[nome]["value"]).status_code == esperado
+
+
+def test_docs_mostra_retorno_de_cada_exemplo():
+    respostas = cliente.get("/openapi.json").json()["paths"]["/api/calcular"]["post"]["responses"]
+    sucesso = respostas["200"]["content"]["application/json"]["examples"]
+    erros = respostas["400"]["content"]["application/json"]["examples"]
+    assert set(sucesso) | set(erros) == set(EXEMPLOS)
+    assert sucesso["mruv_frenagem"]["value"]["resultado"]["valor"] == pytest.approx(50)
+    assert erros["erro_dados_insuficientes"]["value"]["tipo"] == "dados_insuficientes"
 
 FRENAGEM = {
     "movimento": "mruv",
