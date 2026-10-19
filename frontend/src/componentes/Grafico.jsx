@@ -1,69 +1,106 @@
 import Plot from "react-plotly.js";
 
-export default function Grafico() {
-  const x = Array.from({ length: 101 }, (_, i) => -5 + i * 0.1);
-  const y = x.map((value) => value ** 2);
+const EIXOS = {
+  mru: {
+    x: "t",
+    y: "s",
+    tituloX: "Tempo (s)",
+    tituloY: "Deslocamento (m)",
+  },
+  mruv: {
+    x: "t",
+    y: "s",
+    tituloX: "Tempo (s)",
+    tituloY: "Deslocamento (m)",
+  },
+  queda_livre: {
+    x: "t",
+    y: "y",
+    tituloX: "Tempo (s)",
+    tituloY: "Altura (m)",
+  },
+  projetil: {
+    x: "x",
+    y: "y",
+    tituloX: "Posição horizontal (m)",
+    tituloY: "Altura (m)",
+  },
+};
+
+
+export default function Grafico({movimento, trajetoria = []}) {
+  const eixos = EIXOS[movimento];
+
+  if (!eixos || trajetoria.length === 0) {
+    return (
+      <p className="text-text-muted">
+        Não há dados suficientes para representar graficamente o cálculo.
+      </p>
+    );
+  }
+
+  const x = trajetoria.map((ponto) => ponto[eixos.x]);
+  const y = trajetoria.map((ponto) => ponto[eixos.y]);
 
   return (
-    <Plot
-      data={[
-        {
-          x,
-          y,
-          type: "scatter",
-          mode: "lines",
-          line: {
-            color: "#38bdf8",
-            width: 3
-          },
-          name: "y = x²",
-        }
-      ]}
-      layout={{
-        width: 900,
-        height: 350,
-        paper_bgcolor: "#13181E",
-        plot_bgcolor: "#13181E",
-        font: { color: "#EBEFF4" },
-
-        xaxis: {
-          title: {
-            text: "x (m)",
-            font: {
-              color: "#989FA8",
-              size: 14,
-              standoff: 10,
+    <div className="w-full min-w-0 py-4">
+      <Plot
+        data={[
+          {
+            x,
+            y,
+            type: "scatter",
+            mode: "lines",
+            line: {
+              color: "#38bdf8",
+              width: 3,
             },
+            hovertemplate:
+              "%{x:.2f}, %{y:.2f}<extra></extra>",
           },
-          zeroline: true,
-          range: [-10, 10],
-          zerolinecolor: "#989FA8",
-          zerolinewidth: 2,
-          gridcolor: "#272C32",
-          linecolor: "#272C32",
-        },
-
-        yaxis: {
-          title: {
-            text: "y (m)",
-            font: {
-              color: "#989FA8",
-              size: 14,
-              standoff: 10,
+        ]}
+        layout={{
+          autosize: true,
+          height: 350,
+          paper_bgcolor: "#13181E",
+          plot_bgcolor: "#13181E",
+          font: {
+            color: "#EBEFF4",
+          },
+          xaxis: {
+            title: {
+              text: eixos.tituloX,
             },
+            autorange: true,
+            gridcolor: "#272C32",
+            zerolinecolor: "#989FA8",
           },
-          zeroline: true,
-          range: [-10, 10],
-          zerolinecolor: "#989FA8",
-          zerolinewidth: 2,
-          gridcolor: "#272C32",
-          linecolor: "#272C32",
-        },
-
-        showlegend: false,
-        margin: { l: 45, r: 20, t: 20, b: 40 },
-      }}
-      config={{ responsive: true }}
-    />
-  )
+          yaxis: {
+            title: {
+              text: eixos.tituloY,
+            },
+            autorange: true,
+            gridcolor: "#272C32",
+            zerolinecolor: "#989FA8",
+          },
+          showlegend: false,
+          margin: {
+            l: 65,
+            r: 20,
+            t: 20,
+            b: 60,
+          },
+        }}
+        config={{
+          responsive: true,
+          displaylogo: false,
+        }}
+        useResizeHandler
+        style={{
+          width: "100%",
+          height: "350px",
+        }}
+      />
+    </div>
+  );
 }

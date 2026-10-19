@@ -24,7 +24,7 @@ export default function App() {
 
     if(calculando) return;
 
-    setErro();
+    setErro("");
     setRespostaCalculo(null);
 
     //Testando apenas Movimento Retilíneo Uniforme e Movimento Retilíneo Uniformemente Variado
@@ -103,20 +103,12 @@ export default function App() {
         <section className="grid grid-cols-3 gap-6">
           <Configure dimension={dimension} formData={formData} setFormData={setFormData} handleSubmit={handleSubmit} />
           <div className="flex flex-col col-span-2 p-6 gap-4 bg-surface border border-border rounded-xl">
-            <Simulacao />
+            <Simulacao resposta={respostaCalculo} />
           </div>
         </section>
         <div aria-live="polite"> 
           { calculando && ( <p className="text-text-muted">/</p> )}
           { erro && ( <p role="alert" className="text-red-400"> {erro} </p> )}
-        {respostaCalculo && (
-          <div className="bg-surface border border-border rounded-xl p-6"> 
-            <p className="text-text-muted">Resultado do cálculo</p> <p className="text-2xl font-bold text-text">
-              {respostaCalculo.resultado.valor.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {" "}
-              {respostaCalculo.resultado.unidade}
-            </p>
-          </div>
-        )}
       </div>
         <div className="flex flex-col p-6 gap-4 bg-surface border border-border rounded-xl">
           <h3 className="text-xl font-bold text-text">Como chegamos ao resultado</h3>
