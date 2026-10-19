@@ -30,15 +30,6 @@ npm run dev
 - Site: http://localhost:5173
 - API: http://localhost:8000/docs
 
-Para a entrega, `npm run build` gera o frontend compilado e `npm start` sobe tudo pelo FastAPI em http://localhost:8000.
-
-## Testes
-
-```bash
-cd backend
-pytest
-```
-
 ## API
 
-O frontend usa uma única rota, `POST /api/calcular`. O `/docs` tem o formato de cada campo e exemplos prontos para testar; ver mais em [`backend/docs/API.md`](backend/docs/API.md).
+`POST /api/calcular`. O `/docs` tem o formato de cada campo e exemplos prontos para testar; ver mais em [`backend/docs/API.md`](backend/docs/API.md).
