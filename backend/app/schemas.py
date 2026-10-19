@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 # Literal: o campo só aceita exatamente estes textos (outro valor -> erro 422).
-IdMovimento = Literal["mru", "mruv", "queda_livre", "projetil"]
+IdMovimento = Literal["mru", "mruv", "queda_livre", "lancamento_vertical", "projetil"]
 
 
 # ---------- Entrada ----------
@@ -25,12 +25,21 @@ class CalculoEntrada(BaseModel):
 
 # ---------- Saída ----------
 
+class SolucaoSaida(BaseModel):
+    rotulo: str          # ex.: "Subida", "Descida"
+    valor: float         # na unidade do resultado
+    valor_si: float
+
+
 class GrandezaSaida(BaseModel):
     valor: float
     unidade: str
     valor_si: float
     unidade_si: str
     conversoes: dict[str, float]
+    # Quando o alvo tem mais de uma resposta válida (ex.: os dois instantes do
+    # lançamento vertical). Vazio no caso comum; "valor" é sempre a primeira.
+    solucoes: list[SolucaoSaida] = []
 
 
 class PassoSaida(BaseModel):

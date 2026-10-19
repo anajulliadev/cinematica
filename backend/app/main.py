@@ -14,6 +14,7 @@ from app.schemas import (
     GrandezaEntrada,
     GrandezaSaida,
     PassoSaida,
+    SolucaoSaida,
     VariavelFaltante,
 )
 from fisica.formulas import DadosInconsistentes, Passo
@@ -52,10 +53,11 @@ def calcular(req: Annotated[CalculoEntrada, Body(openapi_examples=EXEMPLOS)]) ->
     resultado = Solver(mov).resolver(entradas, req.alvo)
 
     # 3. Borda de saída: SI -> unidade escolhida
+    solucoes = mov.solucoes(req.alvo, resultado.estado)
     return CalculoSaida(
         movimento=req.movimento,
         alvo=req.alvo,
-        resultado=_grandeza_saida(resultado.valor_si, unidade_saida),
+        resultado=_grandeza_saida(resultado.valor_si, unidade_saida, solucoes),
         passos=[_passo_saida(mov, p) for p in resultado.passos],
         estado=resultado.estado,
         trajetoria=mov.trajetoria(resultado.estado),
@@ -86,7 +88,7 @@ def _unidade_de_saida(mov: Movimento, alvo: str, id_unidade: str | None) -> Unid
     return unidade
 
 
-def _grandeza_saida(valor_si: float, unidade: Unidade) -> GrandezaSaida:
+def _grandeza_saida(valor_si: float, unidade: Unidade, solucoes=()) -> GrandezaSaida:
     unidades = Conversor.unidades_de(unidade.dimensao)
     return GrandezaSaida(
         valor=Conversor.do_si(valor_si, unidade).valor,
@@ -94,6 +96,10 @@ def _grandeza_saida(valor_si: float, unidade: Unidade) -> GrandezaSaida:
         valor_si=valor_si,
         unidade_si=Conversor.si_de(unidade.dimensao).id,
         conversoes={u.id: Conversor.do_si(valor_si, u).valor for u in unidades},
+        solucoes=[
+            SolucaoSaida(rotulo=rotulo, valor=Conversor.do_si(v, unidade).valor, valor_si=v)
+            for rotulo, v in solucoes
+        ],
     )
 
 

@@ -443,3 +443,109 @@ class AnguloPeloAlcance(FormulaBase):
         if papel == "theta":
             return "O ângulo complementar (90° − θ) atinge o mesmo alcance."
         return None
+
+
+class AlturaNoInstante(FormulaBase):
+    """Altura do projétil num instante dado (ex.: chegada ao topo de um penhasco)."""
+
+    nome = "Altura no instante"
+    papeis = ("y", "h0", "vy", "g", "t")
+    latex = "$y = $h0 + $vy \\cdot $t - \\frac{1}{2} $g \\cdot $t^2"
+    isoladas = {
+        "y": "$y = $h0 + $vy \\cdot $t - \\frac{1}{2} $g \\cdot $t^2",
+        "h0": "$h0 = $y - $vy \\cdot $t + \\frac{1}{2} $g \\cdot $t^2",
+    }
+
+    def _isolar(self, papel, x):
+        match papel:
+            case "y":
+                return x["h0"] + x["vy"] * x["t"] - 0.5 * x["g"] * x["t"] ** 2
+            case "h0":
+                return x["y"] - x["vy"] * x["t"] + 0.5 * x["g"] * x["t"] ** 2
+
+
+class RapidezNaChegada(FormulaBase):
+    nome = "Rapidez na chegada"
+    papeis = ("v_f", "vx", "vy_f")
+    latex = "$v_f = \\sqrt{$vx^2 + $vy_f^2}"
+    isoladas = {"v_f": "$v_f = \\sqrt{$vx^2 + $vy_f^2}"}
+
+    def _isolar(self, papel, x):
+        return math.hypot(x["vx"], x["vy_f"])
+
+
+# =====================================================================
+# Movimento vertical (eixo y para cima, aᵧ = −g, g > 0)
+# =====================================================================
+
+class VelocidadeVertical(FormulaBase):
+    """v = v0 − g·t. Usada no lançamento vertical e, com outros papéis,
+    para a componente vertical do projétil num instante."""
+
+    nome = "Velocidade vertical"
+    papeis = ("v", "v0", "g", "t")
+    latex = "$v = $v0 - $g \\cdot $t"
+    isoladas = {
+        "v": "$v = $v0 - $g \\cdot $t",
+        "v0": "$v0 = $v + $g \\cdot $t",
+        "t": "$t = \\frac{$v0 - $v}{$g}",
+    }
+
+    def _isolar(self, papel, x):
+        match papel:
+            case "v":
+                return x["v0"] - x["g"] * x["t"]
+            case "v0":
+                return x["v"] + x["g"] * x["t"]
+            case "t":
+                return (x["v0"] - x["v"]) / x["g"]
+
+
+class VelocidadeVerticalNaChegada(VelocidadeVertical):
+    """vᵧ na chegada do projétil. Só calcula a velocidade: se também isolasse o
+    tempo, o solver poderia "descobrir" o instante a partir do impacto no chão
+    e inventar uma resposta quando o usuário não informou o instante."""
+
+    nome = "Componente vertical na chegada"
+    isoladas = {"v": "$v = $v0 - $g \\cdot $t"}
+
+
+class PosicaoVertical(FormulaBase):
+    nome = "Posição no lançamento vertical"
+    papeis = ("dy", "v0", "g", "t")
+    latex = "$dy = $v0 \\cdot $t - \\frac{1}{2} $g \\cdot $t^2"
+    isoladas = {
+        "dy": "$dy = $v0 \\cdot $t - \\frac{1}{2} $g \\cdot $t^2",
+        "v0": "$v0 = \\frac{$dy + \\frac{1}{2} $g \\cdot $t^2}{$t}",
+        "t": "$t = \\frac{$v0 \\pm \\sqrt{$v0^2 - 2 $g \\cdot $dy}}{$g}",
+    }
+
+    def _isolar(self, papel, x):
+        match papel:
+            case "dy":
+                return x["v0"] * x["t"] - 0.5 * x["g"] * x["t"] ** 2
+            case "v0":
+                return (x["dy"] + 0.5 * x["g"] * x["t"] ** 2) / x["t"]
+            case "t":
+                return self.raizes(x["dy"], x["v0"], x["g"])[0]
+
+    @staticmethod
+    def raizes(dy, v0, g) -> list[float]:
+        """Instantes positivos em que ½·g·t² − v0·t + Δy = 0, em ordem."""
+        delta = v0**2 - 2 * g * dy
+        if delta < 0:
+            maximo = f"{v0**2 / (2 * g):.2f}".replace(".", ",")
+            raise DadosInconsistentes(
+                f"Lançamento vertical: essa altura não é atingida "
+                f"(o máximo é {maximo} m acima do lançamento)"
+            )
+        raiz = math.sqrt(delta)
+        positivas = sorted(t for t in ((v0 - raiz) / g, (v0 + raiz) / g) if t > 1e-12)
+        if not positivas:
+            raise DadosInconsistentes("Lançamento vertical: nenhum instante positivo atinge essa altura")
+        return positivas
+
+    def _observacao(self, papel):
+        if papel == "t":
+            return "A equação do 2º grau pode ter duas raízes positivas (subida e descida)."
+        return None

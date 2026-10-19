@@ -54,7 +54,7 @@ class Solver:
         while self._dar_um_passo(estado, bloqueadas) is not None:
             pass
 
-        return Resultado(alvo, conhecidas[alvo], passos, estado)
+        return Resultado(alvo, conhecidas[alvo], self._podar(passos, alvo), estado)
 
     # ------------------------------------------------------------------
 
@@ -75,6 +75,18 @@ class Solver:
             conhecidas[var] = valor
             return passo
         return None
+
+    @staticmethod
+    def _podar(passos: list[Passo], alvo: str) -> list[Passo]:
+        """Mantém só os passos de que o alvo depende. O laço pode ter calculado
+        coisas no caminho (ex.: o tempo de voo antes da altura num instante)
+        que não entram na conta do alvo e só confundiriam o passo a passo."""
+        necessarias, mantidos = {alvo}, []
+        for passo in reversed(passos):
+            if passo.variavel in necessarias:
+                mantidos.append(passo)
+                necessarias |= passo.usadas.keys()
+        return mantidos[::-1]
 
     def _alcancaveis(self, conhecidas: dict[str, float]) -> set[str]:
         """Quais variáveis dá para chegar, olhando só os NOMES (sem fazer contas)."""
@@ -118,8 +130,11 @@ class Solver:
                     f"'{id_var}' não é variável de {self.mov.nome} (aceitas: {aceitas})"
                 )
         for id_var, valor in entradas.items():
-            if variaveis[id_var].nao_negativa and valor < 0:
-                raise EntradaInvalida(f"{variaveis[id_var].nome} não pode ser negativo")
+            variavel = variaveis[id_var]
+            if variavel.positiva and valor <= 0:
+                raise EntradaInvalida(f"{variavel.nome} deve ser maior que zero")
+            if variavel.nao_negativa and valor < 0:
+                raise EntradaInvalida(f"{variavel.nome} não pode ser negativo")
 
     def _checar_sinal(self, var, valor):
         variavel = self.mov.variaveis[var]

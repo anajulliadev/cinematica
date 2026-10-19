@@ -21,7 +21,7 @@ def test_docs_mostra_retorno_de_cada_exemplo():
     sucesso = respostas["200"]["content"]["application/json"]["examples"]
     erros = respostas["400"]["content"]["application/json"]["examples"]
     assert set(sucesso) | set(erros) == set(EXEMPLOS)
-    assert sucesso["mruv_frenagem"]["value"]["resultado"]["valor"] == pytest.approx(50)
+    assert sucesso["q01_deslocamento"]["value"]["resultado"]["valor"] == pytest.approx(60)
     assert erros["erro_dados_insuficientes"]["value"]["tipo"] == "dados_insuficientes"
 
 FRENAGEM = {

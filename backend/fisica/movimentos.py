@@ -1,6 +1,6 @@
 """Movimentos: cada um junta as suas variáveis e as suas fórmulas.
 
-Movimento (abstrata) -> MRU, MRUV, QuedaLivre, LancamentoProjetil.
+Movimento (abstrata) -> MRU, MRUV, QuedaLivre, LancamentoVertical, LancamentoProjetil.
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from fisica.formulas import (
     Alcance,
     AlturaMaxima,
+    AlturaNoInstante,
     AnguloPeloAlcance,
     ComponenteX,
     ComponenteY,
@@ -15,10 +16,14 @@ from fisica.formulas import (
     Formula,
     MovimentoUniforme,
     Passo,
+    PosicaoVertical,
+    RapidezNaChegada,
     TempoVoo,
     Torricelli,
     VelocidadeMedia,
     VelocidadeTempo,
+    VelocidadeVertical,
+    VelocidadeVerticalNaChegada,
 )
 from fisica.unidades import Dimensao
 
@@ -30,6 +35,7 @@ class Variavel:
     simbolo: str              # LaTeX
     dimensao: Dimensao
     nao_negativa: bool = False
+    positiva: bool = False    # precisa ser > 0 (ex.: gravidade)
 
 
 # Variáveis reaproveitadas por mais de um movimento
@@ -39,7 +45,11 @@ V = Variavel("v", "velocidade final", "v", Dimensao.VELOCIDADE)
 A = Variavel("a", "aceleração", "a", Dimensao.ACELERACAO)
 T = Variavel("t", "tempo", "t", Dimensao.TEMPO, nao_negativa=True)
 H = Variavel("h", "altura de queda", "h", Dimensao.COMPRIMENTO, nao_negativa=True)
-G = Variavel("g", "aceleração da gravidade", "g", Dimensao.ACELERACAO, nao_negativa=True)
+G = Variavel("g", "aceleração da gravidade", "g", Dimensao.ACELERACAO, positiva=True)
+
+# Lançamento vertical (eixo para cima)
+DY = Variavel("dy", "altura acima do lançamento", "\\Delta y", Dimensao.COMPRIMENTO)
+V_NO_INSTANTE = Variavel("v", "velocidade no instante", "v", Dimensao.VELOCIDADE)
 
 # Variáveis do projétil (a ordem define a ordem das sugestões "informe também: ...")
 V0_LANCAMENTO = Variavel("v0", "velocidade inicial", "v_0", Dimensao.VELOCIDADE, nao_negativa=True)
@@ -50,6 +60,10 @@ ALTURA_MAX = Variavel("H", "altura máxima", "H", Dimensao.COMPRIMENTO, nao_nega
 T_VOO = Variavel("t_voo", "tempo de voo", "t_{voo}", Dimensao.TEMPO, nao_negativa=True)
 VX = Variavel("vx", "velocidade horizontal", "v_x", Dimensao.VELOCIDADE)
 VY = Variavel("vy", "velocidade vertical inicial", "v_y", Dimensao.VELOCIDADE)
+T_CHEGADA = Variavel("t", "instante de chegada", "t", Dimensao.TEMPO, nao_negativa=True)
+Y_NO_INSTANTE = Variavel("y", "altura no instante", "y", Dimensao.COMPRIMENTO, nao_negativa=True)
+VY_CHEGADA = Variavel("vy_f", "velocidade vertical na chegada", "v_{y,f}", Dimensao.VELOCIDADE)
+V_CHEGADA = Variavel("v_f", "rapidez na chegada", "v_f", Dimensao.VELOCIDADE, nao_negativa=True)
 
 
 class Movimento(ABC):
@@ -79,6 +93,11 @@ class Movimento(ABC):
         """Gancho chamado pelo Solver antes do laço. Pode completar dados
         implícitos em `conhecidas` e devolve os passos que explicam isso.
         Padrão: não faz nada."""
+        return []
+
+    def solucoes(self, alvo: str, estado: dict[str, float]) -> list[tuple[str, float]]:
+        """Gancho para quando o alvo tem mais de uma resposta válida
+        (ex.: subida e descida). Devolve [(rótulo, valor_si), ...] ou []."""
         return []
 
     def simbolos(self) -> dict[str, str]:
@@ -128,7 +147,8 @@ class MRUV(Movimento):
         return [DS, V0, V, A, T]
 
     def _criar_formulas(self):
-        return [VelocidadeTempo(), EquacaoHoraria(), Torricelli(), VelocidadeMedia()]
+        # Velocidade média primeiro: com v0, v e t, o deslocamento sai sem passar pela aceleração
+        return [VelocidadeMedia(), VelocidadeTempo(), EquacaoHoraria(), Torricelli()]
 
     def trajetoria(self, estado, n=60):
         if not _tem(estado, "t", "v0", "a"):
@@ -172,13 +192,65 @@ class QuedaLivre(Movimento):
         ]
 
 
+class LancamentoVertical(Movimento):
+    """Eixo para cima, aᵧ = −g. dy é a altura em relação ao ponto de lançamento."""
+
+    nome = "Lançamento Vertical"
+
+    def _criar_variaveis(self):
+        return [V0, DY, G, T, V_NO_INSTANTE]
+
+    def _criar_formulas(self):
+        return [VelocidadeVertical(), PosicaoVertical()]
+
+    @property
+    def padroes(self):
+        return {"g": 9.81}
+
+    def solucoes(self, alvo, estado):
+        # A mesma altura é atingida na subida e na descida: devolve os dois instantes
+        if alvo != "t" or not _tem(estado, "dy", "v0", "g"):
+            return []
+        raizes = PosicaoVertical.raizes(estado["dy"], estado["v0"], estado["g"])
+        if len(raizes) < 2:
+            return []
+        return [(self._fase(estado["v0"] - estado["g"] * t), t) for t in raizes]
+
+    @staticmethod
+    def _fase(velocidade):
+        if velocidade > 1e-9:
+            return "Subida"
+        if velocidade < -1e-9:
+            return "Descida"
+        return "Ponto mais alto"
+
+    def trajetoria(self, estado, n=60):
+        # do lançamento até voltar à altura inicial (ou até o instante pedido, se for depois)
+        if not _tem(estado, "v0", "g"):
+            return []
+        v0, g = estado["v0"], estado["g"]
+        fim = max(2 * v0 / g, estado.get("t", 0.0))
+        if fim <= 0:
+            return []
+        return [
+            {"t": t, "y": v0 * t - 0.5 * g * t**2, "v": v0 - g * t}
+            for t in self._instantes(fim, n)
+        ]
+
+
 class LancamentoProjetil(Movimento):
-    """Oblíquo e horizontal (horizontal = θ = 0). Eixo y para cima, g > 0."""
+    """Oblíquo e horizontal (horizontal = θ = 0). Eixo y para cima, g > 0.
+
+    "Chegada" é o instante t, se informado (ex.: topo de um penhasco);
+    sem t, é o retorno ao chão (t_voo)."""
 
     nome = "Lançamento de Projétil"
 
     def _criar_variaveis(self):
-        return [V0_LANCAMENTO, THETA, H0, G, ALCANCE, ALTURA_MAX, T_VOO, VX, VY]
+        return [
+            V0_LANCAMENTO, THETA, H0, G, ALCANCE, ALTURA_MAX, T_VOO, VX, VY,
+            T_CHEGADA, Y_NO_INSTANTE, VY_CHEGADA, V_CHEGADA,
+        ]
 
     def _criar_formulas(self):
         return [
@@ -187,6 +259,11 @@ class LancamentoProjetil(Movimento):
             TempoVoo(),
             Alcance(),
             AlturaMaxima(),
+            AlturaNoInstante(),
+            # componente vertical na chegada: no instante dado (se houver) ou no chão
+            VelocidadeVerticalNaChegada({"v": "vy_f", "v0": "vy", "t": "t"}),
+            VelocidadeVerticalNaChegada({"v": "vy_f", "v0": "vy", "t": "t_voo"}),
+            RapidezNaChegada(),
             AnguloPeloAlcance(),   # o caso inverso fica por último
         ]
 
@@ -195,7 +272,8 @@ class LancamentoProjetil(Movimento):
         return {"h0": 0.0, "g": 9.81}
 
     def trajetoria(self, estado, n=60):
-        if not _tem(estado, "t_voo", "vx", "vy", "h0", "g"):
+        fim = estado.get("t", estado.get("t_voo"))
+        if fim is None or not _tem(estado, "vx", "vy", "h0", "g"):
             return []
         vx, vy, h0, g = estado["vx"], estado["vy"], estado["h0"], estado["g"]
         return [
@@ -206,7 +284,7 @@ class LancamentoProjetil(Movimento):
                 "vx": vx,
                 "vy": vy - g * t,
             }
-            for t in self._instantes(estado["t_voo"], n)
+            for t in self._instantes(fim, n)
         ]
 
     def preparar(self, conhecidas):
@@ -232,5 +310,6 @@ MOVIMENTOS: dict[str, Movimento] = {
     "mru": MRU(),
     "mruv": MRUV(),
     "queda_livre": QuedaLivre(),
+    "lancamento_vertical": LancamentoVertical(),
     "projetil": LancamentoProjetil(),
 }
