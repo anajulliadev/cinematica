@@ -4,5 +4,15 @@ export async function calcular(payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return resposta.json();
+
+  const dados = await resposta.json();
+
+  if(!resposta.ok) {
+    throw new Error(
+      dados.mensagem ??
+      "Não foi possível calcular. Verifique os dados informados."
+    )
+  }
+  
+  return dados;
 }

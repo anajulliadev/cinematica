@@ -2,39 +2,73 @@ import { Button } from "@/components/ui/button";
 import Configure from "./componentes/Configure";
 import Simulacao from "./componentes/Simulacao";
 import { useState } from "react";
-
+import { criarFormulario } from "./config/movimentos";
+import { calcular } from "./api";
 
 export default function App() {
   const [dimension, setDimension] = useState(1);
-  const [formData, setFormData] = useState({
-    tipoMovimento: "",
-    objetivo: "",
-    velocidadeInicial: "",
-    unidadeVelocidade: "",
-    angulo: "",
-    unidadeAngulo: "",
-    alturaInicial: "",
-    unidadeAltura: "",
-    gravidade: "9.81",
-    unidadeGravidade: "",
-  });
+  const [formData, setFormData] = useState(() => criarFormulario(1));
 
-  function changeDimension1(event) {
-    if (dimension == 1) {
-      setDimension(2);
-    }
+  const [respostaCalculo, setRespostaCalculo] = useState(null);
+  const [erro, setErro] = useState("");
+  const [calculando, setCalculando] = useState(false);
+
+  function changeDimension(event) {
+    if (dimension == event) return;
+    setDimension(event);
+    setFormData(criarFormulario(event));
   }
 
-  function changeDimension2(event) {
-    if (dimension == 2) {
-      setDimension(1);
-    }
-  }
-
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    console.log(formData);
+    if(calculando) return;
+
+    setErro();
+    setRespostaCalculo(null);
+
+    //Testando apenas Movimento Retilíneo Uniforme e Movimento Retilíneo Uniformemente Variado
+    if(!["mru", "mruv"].includes(formData.tipoMovimento)) return;
+
+    setCalculando(true);
+
+    try {
+      //Variváveis do formulário preenchida pelo usuário
+      const conhecidas = {};
+
+      for(const [id, entrada] of Object.entries(formData.conhecidas)) {
+        if(id == formData.objetivo) continue;
+
+        const text = String(entrada.valor ?? "").trim();
+
+        if(text == "") continue;
+
+        const valor = Number(text);
+
+        if(!Number.isFinite(valor)) {
+          throw new Error(`Informe um número válido para ${id}.`)
+        }
+
+        conhecidas[id] = {
+          valor,
+          unidade: entrada.unidade
+        };
+      }
+
+      const payload = {
+        movimento: formData.tipoMovimento,
+        alvo: formData.objetivo,
+        conhecidas
+      };
+
+      const dados = await calcular(payload);
+
+      setRespostaCalculo(dados);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível calcular");
+    } finally {
+      setCalculando(false);
+    }
   }
 
   return (
@@ -49,14 +83,16 @@ export default function App() {
           </p>
           <div className="flex gap-1 bg-surface rounded-full p-1">
             <Button
-              onClick={() => setDimension(1)}
+              onClick={() => changeDimension(1)}
+              aria-pressed={dimension === 1}
               className={`py-5 px-6 rounded-full ${
                 dimension == 2 ? 'bg-surface' : 'bg-primary'
               }`}>
               <p className="text-base font-bold">1D</p>
             </Button>
             <Button
-              onClick={() => setDimension(2)}
+              onClick={() => changeDimension(2)}
+              aria-pressed={dimension === 2}
               className={`py-5 px-6 rounded-full ${
                 dimension == 1 ? 'bg-surface' : 'bg-primary'
               }`}>
@@ -65,11 +101,23 @@ export default function App() {
           </div>
         </header>
         <section className="grid grid-cols-3 gap-6">
-          <Configure formData={formData} setFormData={setFormData} handleSubmit={handleSubmit} />
+          <Configure dimension={dimension} formData={formData} setFormData={setFormData} handleSubmit={handleSubmit} />
           <div className="flex flex-col col-span-2 p-6 gap-4 bg-surface border border-border rounded-xl">
             <Simulacao />
           </div>
         </section>
+        <div aria-live="polite"> 
+          { calculando && ( <p className="text-text-muted">/</p> )}
+          { erro && ( <p role="alert" className="text-red-400"> {erro} </p> )}
+        {respostaCalculo && (
+          <div className="bg-surface border border-border rounded-xl p-6"> 
+            <p className="text-text-muted">Resultado do cálculo</p> <p className="text-2xl font-bold text-text">
+              {respostaCalculo.resultado.valor.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {" "}
+              {respostaCalculo.resultado.unidade}
+            </p>
+          </div>
+        )}
+      </div>
         <div className="flex flex-col p-6 gap-4 bg-surface border border-border rounded-xl">
           <h3 className="text-xl font-bold text-text">Como chegamos ao resultado</h3>
           <div className="grid grid-cols-3 gap-4">
