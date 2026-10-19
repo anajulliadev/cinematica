@@ -3,10 +3,15 @@ import Configure from "./componentes/Configure";
 import Simulacao from "./componentes/Simulacao";
 import { useState } from "react";
 import { criarFormulario } from "./config/movimentos";
+import { calcular } from "./api";
 
 export default function App() {
   const [dimension, setDimension] = useState(1);
   const [formData, setFormData] = useState(() => criarFormulario(1));
+
+  const [respostaCalculo, setRespostaCalculo] = useState(null);
+  const [erro, setErro] = useState("");
+  const [calculando, setCalculando] = useState(false);
 
   function changeDimension(event) {
     if (dimension == event) return;
@@ -14,10 +19,56 @@ export default function App() {
     setFormData(criarFormulario(event));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    console.log(formData);
+    if(calculando) return;
+
+    setErro();
+    setRespostaCalculo(null);
+
+    //Testando apenas Movimento Retilíneo Uniforme e Movimento Retilíneo Uniformemente Variado
+    if(!["mru", "mruv"].includes(formData.tipoMovimento)) return;
+
+    setCalculando(true);
+
+    try {
+      //Variváveis do formulário preenchida pelo usuário
+      const conhecidas = {};
+
+      for(const [id, entrada] of Object.entries(formData.conhecidas)) {
+        if(id == formData.objetivo) continue;
+
+        const text = String(entrada.valor ?? "").trim();
+
+        if(text == "") continue;
+
+        const valor = Number(text);
+
+        if(!Number.isFinite(valor)) {
+          throw new Error(`Informe um número válido para ${id}.`)
+        }
+
+        conhecidas[id] = {
+          valor,
+          unidade: entrada.unidade
+        };
+      }
+
+      const payload = {
+        movimento: formData.tipoMovimento,
+        alvo: formData.objetivo,
+        conhecidas
+      };
+
+      const dados = await calcular(payload);
+
+      setRespostaCalculo(dados);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível calcular");
+    } finally {
+      setCalculando(false);
+    }
   }
 
   return (
@@ -55,6 +106,18 @@ export default function App() {
             <Simulacao />
           </div>
         </section>
+        <div aria-live="polite"> 
+          { calculando && ( <p className="text-text-muted">/</p> )}
+          { erro && ( <p role="alert" className="text-red-400"> {erro} </p> )}
+        {respostaCalculo && (
+          <div className="bg-surface border border-border rounded-xl p-6"> 
+            <p className="text-text-muted">Resultado do cálculo</p> <p className="text-2xl font-bold text-text">
+              {respostaCalculo.resultado.valor.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {" "}
+              {respostaCalculo.resultado.unidade}
+            </p>
+          </div>
+        )}
+      </div>
         <div className="flex flex-col p-6 gap-4 bg-surface border border-border rounded-xl">
           <h3 className="text-xl font-bold text-text">Como chegamos ao resultado</h3>
           <div className="grid grid-cols-3 gap-4">
