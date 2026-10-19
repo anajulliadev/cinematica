@@ -4,6 +4,7 @@ import Simulacao from "./componentes/Simulacao";
 import { useState } from "react";
 import { criarFormulario } from "./config/movimentos";
 import { calcular } from "./api";
+import Passos from "./componentes/Passos";
 
 export default function App() {
   const [dimension, setDimension] = useState(1);
@@ -110,26 +111,7 @@ export default function App() {
           { calculando && ( <p className="text-text-muted">/</p> )}
           { erro && ( <p role="alert" className="text-red-400"> {erro} </p> )}
       </div>
-        <div className="flex flex-col p-6 gap-4 bg-surface border border-border rounded-xl">
-          <h3 className="text-xl font-bold text-text">Como chegamos ao resultado</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex flex-col gap-3">
-              <p className="text-text text-base">1. Conversão de unidades</p>
-              <p className="text-text-muted text-sm">A velocidade foi convertida para o SI.</p>
-              <p className="bg-bg text-text p-3 rounded-lg" >72 km/h ÷ 3,6 = 20 m/s</p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <p className="text-text text-base">2   Fórmula aplicada</p>
-              <p className="text-text-muted text-sm">Alturas inicial e final iguais, sem resistência do ar.</p>
-              <p className="bg-bg text-text p-3 rounded-lg" >R = v₀² · sen(2θ) / g</p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <p className="text-text text-base">3   Substituição dos valores</p>
-              <p className="text-text-muted text-sm">Com v₀ = 20 m/s, θ = 45° e g = 9,81 m/s².</p>
-              <p className="bg-bg text-text p-3 rounded-lg" >R = 20² · sen(90°) / 9,81 = 40,77 m</p>
-            </div>
-          </div>
-        </div>
+        <Passos resposta={respostaCalculo} />
       </main>
 
     </main>
