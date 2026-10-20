@@ -13,6 +13,7 @@ export const UNIDADES = {
 };
 
 export const CAMPOS = {
+  dy: campo("dy", "Deslocamento vertical", "comprimento"),
   ds: campo("ds", "Deslocamento", "comprimento"),
   s0: campo("s0", "Posição inicial", "comprimento"),
   s: campo("s", "Posição final", "comprimento"),
@@ -78,8 +79,8 @@ export const MOVIMENTOS = [
     value: "vertical",
     label: "Lançamento vertical",
     dimensao: 1,
-    campos: ["ds", "v0", "v", "g", "t"],
-    objetivos: ["ds", "v0", "v", "t"],
+    campos: ["dy", "v0", "v", "g", "t"],
+    objetivos: ["dy", "v0", "v", "t"],
   },
   {
     value: "horizontal",

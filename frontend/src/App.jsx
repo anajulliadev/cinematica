@@ -6,6 +6,21 @@ import { criarFormulario } from "./config/movimentos";
 import { calcular } from "./api";
 import Passos from "./componentes/Passos";
 
+const TESTE = {
+  mru: "mru",
+  mruv: "mruv",
+  queda_livre: "queda_livre",
+  vertical: "lancamento_vertical",
+  horizontal: "projetil",
+  obliquo: "projetil",
+};
+
+function variavelDaApi(tipoMovimento, id) {
+  if (tipoMovimento === "vertical" && id === "ds") return "dy";
+
+  return id;
+}
+
 export default function App() {
   const [dimension, setDimension] = useState(1);
   const [formData, setFormData] = useState(() => criarFormulario(1));
@@ -29,7 +44,15 @@ export default function App() {
     setRespostaCalculo(null);
 
     //Testando apenas Movimento Retilíneo Uniforme e Movimento Retilíneo Uniformemente Variado
-    if(!["mru", "mruv"].includes(formData.tipoMovimento)) return;
+    if(!["mru", "mruv", "queda_livre", "vertical", "horizontal", "obliquo"].includes(formData.tipoMovimento)) return;
+
+    const movimentoApi = TESTE[formData.tipoMovimento];
+
+    if (!movimentoApi) {
+      throw new Error(
+        "Esse movimento ainda não está integrado à API."
+      );
+    }
 
     setCalculando(true);
 
@@ -50,14 +73,23 @@ export default function App() {
           throw new Error(`Informe um número válido para ${id}.`)
         }
 
-        conhecidas[id] = {
+        const idApi = variavelDaApi(formData.tipoMovimento, id);
+
+        conhecidas[idApi] = {
           valor,
           unidade: entrada.unidade
         };
-      }
+      };
+
+      if (formData.tipoMovimento === "horizontal") {
+        conhecidas.theta = {
+          valor: 0,
+          unidade: "grau",
+        };
+      };
 
       const payload = {
-        movimento: formData.tipoMovimento,
+        movimento: movimentoApi,
         alvo: formData.objetivo,
         conhecidas
       };

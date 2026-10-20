@@ -25,6 +25,12 @@ const EIXOS = {
     tituloX: "Posição horizontal (m)",
     tituloY: "Altura (m)",
   },
+  lancamento_vertical: {
+    x: "t",
+    y: "y",
+    tituloX: "Tempo (s)",
+    tituloY: "Deslocamento vertical (m)",
+  },  
 };
 
 
@@ -38,6 +44,8 @@ export default function Grafico({movimento, trajetoria = []}) {
       </p>
     );
   }
+
+  console.log("Primeiros pontos:", trajetoria.slice(0, 3));
 
   const x = trajetoria.map((ponto) => ponto[eixos.x]);
   const y = trajetoria.map((ponto) => ponto[eixos.y]);
